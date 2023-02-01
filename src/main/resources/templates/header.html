@@ -1,0 +1,47 @@
+<link rel="stylesheet" href="css/header.css">
+
+<div class="top-bar">
+  <div class="head_content">
+    <img alt="로고" src="images/blind-logo.png" class="top-left logo">
+    <p th:if="${session.member!= null}" th:text="|${session.member.mid}님, 환영합니다.|"></p>
+    <p th:unless="${session.member!= null}">글을 작성하시려면 로그인을 해주세요</p>
+    <div class="top-right top_btn">
+      <button id="top_post">글쓰기</button>
+      <button id="top_login">로그인</button>
+      <button id="top_logout" th:if="${session.member != null}"><a th:href="@{/logoutProc}" id="alogout">로그아웃</a>
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<script th:inline="javascript">
+
+    let logo = document.getElementsByClassName("logo")[0]
+    let write = document.getElementById("top_post")
+    let login = document.getElementById("top_login")
+
+    if ([[${session.member}]] != null) {
+        login.classList.add("hidden")
+    }
+
+    logo.addEventListener("click", () => {
+        location.href = "/";
+        console.log("로고")
+    })
+    write.addEventListener("click", () => {
+        console.log("작성")
+        if ([[${session.member}]] == null) {
+            alert("글을 작성하시려면 로그인을 먼저 해주세요")
+            location.href = "login"
+        } else {
+            location.href = "writePost"
+        }
+    })
+    login.addEventListener("click", () => {
+        console.log("로그인")
+        location.href = "login"
+    })
+
+</script>
+

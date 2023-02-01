@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>게시글 상세페이지</title>
+  <link rel="stylesheet" href="css/detail.css">
+  <link rel="stylesheet" href="css/detail.css">
+  <script src="https://code.jquery.com/jquery-3.6.1.min.js"
+          integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+  <th:block th:include="header.html"></th:block>
+
+</head>
+
+<body>
+<div id="wrapdiv">
+  <div class="content">
+    <div class="view_head">
+      <div class="category" th:text="${board.bcategory}"></div>
+      <div class="content_title" th:text="${board.btitle}"></div>
+      <div class="minfo">
+        <span th:text="${board.mbid.mcname}"></span> ·
+        <span id="writer" th:text="${board.mbid.mid}"></span>
+      </div>
+      <div class="binfo">
+
+        <span class="boardInfo" th:text="|조회수 ${board.bview}|"></span> ·
+        <span class="boardInfo" th:text="'💬 '+ ${board.bcomment}"></span>
+        <!--타임리프에서 onclick 이벤트 발생시 실행할 함수의 파라미터 넘기는 방법. th:변수명=값 -> this.getAttribute(변수명)-->
+        <span class="boardInfo likeBtn" th:text="'👍 '+ ${board.blike}"
+              th:target="board"
+              th:targetNo="${board.bno}"
+              onclick="addLike(this.getAttribute('target'), this.getAttribute('targetNo'))"></span>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="bcontent" th:text="${board.bcontent}"></div>
+    <div>
+      <!--로그인한 계정과 글 작성자가 동일할 경우, 수정, 삭제버튼 출력-->
+      <th:block th:if="${member!=null}">
+        <th:block th:if="${#strings.equals(member.mid, board.mbid.mid)}">
+          <button id="upbtn">수정</button>
+          <button id="delbtn">삭제</button>
+        </th:block>
+      </th:block>
+    </div>
+
+
+    <!--   첨부파일-->
+    <div id="filebox">
+      <div class="file">FILES</div>
+<!--첨부파일 없는 경우-->
+      <th:block th:if="${#lists.isEmpty(bfList)}">
+        첨부된 파일이 없습니다.
+      </th:block>
+      <!--첨부파일이 존재할 경우-->
+      <th:block th:unless="${#lists.isEmpty(bfList)}">
+        <th:block th:each="bf:${bfList}">
+          <a th:href="@{download(fsysname=${bf.fsysname},foriname=${bf.foriname})}">
+            <span class="file-title" th:text="${bf.foriname}"></span>
+          </a>
+        </th:block>
+      </th:block>
+    </div>
+
+
+    <!--댓글-->
+    <div class="reply_wrap">
+<!--      로그인 상태일때 댓글 작성 가능-->
+      <th:block th:if="${session.member}!=null">
+        <div class="reply">
+          <form action="cWriteProc" method="post" id="replyfrm" class="reply_form">
+            <input type="hidden" name="mccname" th:value="${session.member.mcname}">
+            <input type="hidden" name="bcno" th:value="${session.board.bno}">
+            <input type="hidden" name="mcid" th:value="${session.member.mid}">
+            <input class="plzlogin" type="text" name="ccontent" placeholder="댓글을 입력해주세요">
+            <Button class="redBtn">댓글작성</Button>
+          </form>
+        </div>
+      </th:block>
+<!--      비로그인시 출력할 문구-->
+      <th:block th:unless="${session.member}!=null">
+        <input class="plzlogin" placeholder="댓글을 입력하시려면 로그인 해주세요" readonly>
+        <button class="login" id="login">로그인</button>
+
+      </th:block>
+    </div>
+
+  </div>
+  <div class="comment_area"></div>
+  <button id="moreComment">댓글 더보기</button>
+
+</div>
+</body>
+<th:block th:include="footer.html"></th:block>
+<script th:inline="javascript">
+<!--    서버에서 전달한 메시지가 존재할 경우, alert으로 출력-->
+    let msg = [[${msg}]];
+    if (msg != null) {
+        alert(msg);
+    }
+
+    //로그인한 계정과 글 작성자 일치여부를 판단하기 위해,
+    //로그인한 계정을 변수에 저장
+    let loginUser = [[${member}]];
+
+    //현재 글 번호 저장
+    let nowBno = [[${session.board.bno}]]
+
+    let cPageNum = 1;
+    //댓글 불러오기
+    getComment(cPageNum, nowBno)
+
+//좋아요 +1
+    function addLike(target, targetNo) {
+        let URL;
+        if (target === "board") {
+            URL = "likeBoard?bno=" + targetNo;
+        } else {
+            URL = "likeComment?cno=" + targetNo;
+        }
+        window.location.href = URL;
+    }
+
+    //댓글 5개씩 출력
+    function getComment(cPageNum, nowBno) {
+
+        console.log("getTopicList")
+        let nowDate = new Date().getTime();
+        $.ajax({
+            type: 'get',
+            url: "getCommentList",
+            dataType: "JSON",
+            data: {
+                'cPageNum': cPageNum,
+                'bno': nowBno
+            },
+            success: function (commentList) {
+              //불러온 댓글이 5개 미만일 때(더이상의 댓글이 없을때), 댓글 더보기 버튼 숨기기
+                if (commentList.length < 5) {
+                    $("#moreComment").addClass("hidden");
+                } else {
+                    $("#moreComment").removeClass("hidden");
+                }
+
+                $.each(commentList, function (idx, comment) {
+                    //게시글에 출력할 문자열을 저장할 변수
+                    let fromNow;
+                    //게시글 작성 시간을 밀리초로 변환하여 저장
+                    let writtenDate = new Date(comment.cdate).getTime();
+                    //현재시간과 게시글 작성시간의 차이를 분단위로 환산
+                    let timeGap = (nowDate - writtenDate) / 1000 / 60;
+                    //1분이내 -> 방금전
+                    if (timeGap < 1) {
+                        fromNow = "방금전";
+                    }
+                    //1시간 이내 -> x분 전
+                    else if (1 <= timeGap && timeGap < 60) {
+                        fromNow = Math.floor(timeGap) + "분 전";
+                    }
+                    //하루 이내-> x시간 전
+                    else if (60 <= timeGap && timeGap < 60 * 24) {
+                        fromNow = Math.floor(timeGap / 60) + "시간 전";
+                    }
+                    //한달 이내 -> x일 전
+                    else if (60 * 24 <= timeGap && timeGap < 60 * 24 * 30) {
+                        fromNow = Math.floor(timeGap / 60 / 24) + "일 전";
+                    }
+                    //1년이내 -> x달 전
+                    else if (60 * 24 * 30 <= timeGap && timeGap < 60 * 24 * 30 * 12) {
+                        fromNow = Math.floor(timeGap / 60 / 24 / 30) + "달 전";
+                    }
+                    //1년 이상 -> x년전
+                    else {
+                        fromNow = Math.floor(timeGap / 60 / 24 / 30 / 12) + "년 전";
+                    }
+
+                    let $commentWrap = $('<div class="comment_wrap">').appendTo('.comment_area');
+                    let $infoWrap = ($commentWrap).append('<div class="info_wrap">');
+
+                    $('<span class="c_company">').html(comment.mcid.mcname + " · ").appendTo($commentWrap);
+                    $('<span class="c_writer">').html(comment.mcid.mid).appendTo($commentWrap);
+                    $('<span class="c_content">').html(comment.ccontent).appendTo($commentWrap);
+
+                    //좋아요 버튼 onclick 이벤트 발생 시, 좋아요 추가 함수 지정
+                    $('<span class="c_info likeBtn" >').html("👍 : " + comment.clike).appendTo($infoWrap).click(
+                        () => addLike("comment", comment.cno));
+                    $('<span class="c_date c_info">').html(fromNow).appendTo($infoWrap);
+                    $('<span class="hidden">').html(comment.mcid.mid).appendTo($commentWrap);
+                    //로그인한 계정과 댓글 작성자가 동일할 경우, 댓글 삭제 버튼 출력
+                    loginUser !== null ? (loginUser.mid === comment.mcid.mid
+                            ? $('<button class="deleteCommentBtn">').text("댓글 삭제").appendTo($infoWrap)
+                            : null)
+                        : null
+                    $('<button class=" hidden">').text(comment.cno).appendTo($infoWrap);
+
+                });
+            },
+            error: function (error) {
+                console.log(error)
+            }
+        });
+    }
+
+    //댓글 삭제
+    $(document).on("click", ".deleteCommentBtn", function () {
+        let checkDel = confirm("정말 삭제하시겠습니까?")
+        if (checkDel) {
+            location.href = "cDeleteProc?cno=" + $(this).next().text();
+        } else {
+            alert("삭제가 취소됐습니다.")
+        }
+    })
+
+  //댓글 더보기
+    $("#moreComment").click(function () {
+        cPageNum++
+        console.log("moreComment" + cPageNum)
+        getComment(cPageNum, nowBno)
+    })
+
+  //로그인 페이지 이동
+    $("#login").click(function () {
+            location.href = "login"
+        }
+    )
+
+    //게시글 수정
+    $("#upbtn").click(function () {
+        location.href = "updateFrm?bno=" + nowBno;
+    });
+
+    //게시글 삭제
+    $("#delbtn").click(function () {
+        let checkDel = confirm("글 제목 '" + [[${board.btitle}]] + "'을(를) 정말 삭제하시겠습니까?")
+        if (checkDel) {
+            location.href = "delete?bno=" + nowBno;
+        } else {
+            alert("삭제가 취소됐습니다.")
+        }
+    });
+
+
+</script>
+</html>

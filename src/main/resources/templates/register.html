@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>register</title>
+  <link rel="stylesheet" href="css/register.css">
+  <link rel="stylesheet" href="css/header.css">
+</head>
+<script src="https://code.jquery.com/jquery-3.6.1.min.js"
+        integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ="
+        crossorigin="anonymous"></script>
+<body>
+<div class="helloID">
+  <h1 id="title"> MemberManager</h1>
+</div>
+<center>
+  <div class="login">
+    <div class="login-screen">
+      <h6>회원 가입</h6>
+    </div>
+    <div class="login-form">
+      <form th:action="@{regProc}" method="post">
+        <div class="control-group">
+          <input type="text" name="mid" class="login-field" id="mid"
+                 placeholder="아이디" required>
+          <button type="button" id="checkDupBtn">중복확인</button>
+        </div>
+        <div class="control-group">
+          <input type="password" name="mpwd" class="login=field"
+                 placeholder="비밀번호" required>
+        </div>
+        <div class="control-group">
+          <input type="email" name="memail" class="login-field"
+                 placeholder="이메일" required>
+        </div>
+        <div class="control-group">
+          <input type="text" name="mcname" class="login-field"
+                 placeholder="회사명" required>
+        </div>
+        <input type="submit" value="가입" class="btn">
+        <a href="/" class="login-link">돌아가기</a>
+      </form>
+    </div>
+  </div>
+</center>
+<th:block th:include="footer.html"></th:block>
+</body>
+<script th:inline="javascript">
+    let m = [[${msg}]];
+    if (m != null) {
+        alert(m);
+    }
+
+    //중복확인
+    $("#checkDupBtn").click(function () {
+        let inputId = $("#mid").val();
+        if (inputId === "") {
+            alert("ID를 입력해주세요.")
+        } else {
+
+            $.ajax({
+                url: "checkDuplicatedId",
+                type: "post",
+                data: {"id": inputId},
+                success: function (result) {
+                    alert(result);
+                },
+                error: function (error) {
+                    alert("중복 확인 과정에 문제가 발생했습니다. \n 관리자에게 문의하세요.");
+                    console.log(error);
+                }
+            });
+        }
+    })
+
+
+</script>
+</html>

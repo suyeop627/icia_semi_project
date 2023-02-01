@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+  <link rel="stylesheet" href="css/topic.css">
+  <link rel="stylesheet" href="css/header.css">
+  <link rel="stylesheet" href="css/footer.css">
+
+  <script src="https://code.jquery.com/jquery-3.6.1.min.js"
+          integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ="
+          crossorigin="anonymous"></script>
+</head>
+<body>
+<header>
+  <th:block th:include="header.html"></th:block>
+</header>
+<section>
+  <div class="topic_wrap">
+    <ol id="categoryList">
+      <li>전체</li>
+      <li>베스트</li>
+      <li>자유게시판</li>
+      <li>회사생활</li>
+      <li>주식/투자</li>
+      <li>썸/연애</li>
+      <li>결혼</li>
+      <li>라이프</li>
+    </ol>
+  </div>
+  <br>
+
+  <span id="categoryPrint"></span>
+  <!--전체 또는 베스트 카테고리가 아닐 경우, new hot 출력-->
+  <div class="nhlogo hidden">
+    <span>new</span>
+    <span>hot</span>
+  </div>
+  <div class="post_area">
+
+
+  </div>
+
+</section>
+<footer>
+  <th:block th:include="footer.html"></th:block>
+</footer>
+</body>
+<script th:inline="javascript">
+    <!--서버로부터 받은 메세지가 존재할 경우, 알림 출력-->
+    let m = [[${msg}]];
+    if (m !== null) {
+        alert(m);
+    }
+
+    //페이지 번호를 저장할 변수
+    let pageNum = 1;
+    //카테고리를 저장할 변수
+    let category;
+
+
+    $(function () {
+
+        //서버에서 받은 category의 값이 null이 아닐경우, 해당 category의를 저장
+        if (sessionStorage.getItem("category") != null) {
+            category = sessionStorage.getItem("category");
+
+            //카테고리가 전체 또는 베스트가 아닐 경우, new, hot 출력.(새로고침 시 상태유지)
+            if (category !== "전체" && category !== "베스트") {
+                $('.nhlogo').removeClass("hidden");
+            } else {
+                $('.nhlogo').addClass("hidden");
+            }
+
+            //sessionStorage에 저장된 카테고리와 일치하는 카테고리메뉴를 체크상태로 출력(새로고침 시 상태유지)
+            let $categoryList = $('#categoryList').children("li")
+            $.each($categoryList, function (idx, li) {
+                if (li.innerHTML === category) {
+                    li.classList.add("checkedMenu")
+                }
+            })
+        }
+        //서버에서 받은 category의 값이 null이면, category에 '전체' 저장
+        else {
+            category = "전체"
+        }
+
+
+        //카테고리에 해당하는 게시글 가져오기
+        getTopic(category, pageNum)
+
+
+        //카테고리를 클릭했을 때 처리
+        $('li').click(function () {
+            //전체 카테고리 메뉴의 클래스 제거
+            $(this).parent().children("li").removeClass("checkedMenu")
+            //클릭한 카테고리에만 클래스 재 부여
+            $(this).addClass("checkedMenu")
+            //페이지번호를 null로 초기화
+            pageNum = 1;
+            //클릭한 카테고리의 text를 sessionStorage 및 category 변수에 저장
+            sessionStorage.setItem("category", $(this).text());
+
+            category = $(this).text();
+
+            //카테고리가 '전체'또는 '베스트' 가 아닐 경우, new, hot 출력.
+            if (category !== "전체" && category !== "베스트") {
+                $('.nhlogo').removeClass("hidden");
+            } else {
+                $('.nhlogo').addClass("hidden");
+            }
+            //기존에 출력했던 게시글 제거
+            $('.post_area').empty();
+            //새로운 카테고리의 게시글 출력
+            getTopic(category, pageNum)
+
+        });
+
+        //게시글 목록 가져오기
+        function getTopic(category, pageNum, userId) {
+            console.log(pageNum);
+            //현재시간을 밀리초로 저장
+            let nowDate = new Date().getTime();
+            $.ajax({
+                    type: 'get',
+                    url: "getTopicList",
+                    dataType: "JSON",
+                    data: {
+                        "category": category,
+                        "pageNum": pageNum
+                    },
+                    success: function (topicList) {
+
+                        $.each(topicList, function (idx, board) {
+                            //게시글에 출력할 문자열을 저장할 변수
+                            let fromNow;
+                          //게시글 작성 시간을 밀리초로 변환하여 저장
+                            let writtenDate = new Date(board.bdate).getTime();
+                          //현재시간과 게시글 작성시간의 차이를 분단위로 환산
+                            let timeGap = (nowDate - writtenDate) / 1000 / 60;
+                          //1분이내 -> 방금전
+                            if (timeGap < 1) {
+                                fromNow = "방금전";
+                            }
+                            //1시간 이내 -> x분 전
+                            else if (1 <= timeGap && timeGap < 60) {
+                                fromNow = Math.floor(timeGap) + "분 전";
+                            }
+                            //하루 이내-> x시간 전
+                            else if (60 <= timeGap && timeGap < 60 * 24) {
+                                fromNow = Math.floor(timeGap / 60) + "시간 전";
+                            }
+                            //한달 이내 -> x일 전
+                            else if (60 * 24 <= timeGap && timeGap < 60 * 24 * 30) {
+                                fromNow = Math.floor(timeGap / 60 / 24) + "일 전";
+                            }
+                            //1년이내 -> x달 전
+                            else if (60 * 24 * 30 <= timeGap && timeGap < 60 * 24 * 30 * 12) {
+                                fromNow = Math.floor(timeGap / 60 / 24 / 30) + "달 전";
+                            }
+                            //1년 이상 -> x년전
+                            else {
+                                fromNow = Math.floor(timeGap / 60 / 24 / 30 / 12) + "년 전";
+                            }
+
+                            //게시글목록을 출력할 div 선택
+                            let $postWrap = $('<div class="post_wrap readPost">').appendTo('.post_area');
+
+
+                            $('<span class="post_category">').html(board.bcategory).appendTo($postWrap);
+                            $('<div class="post_title ">').html('<span >' + board.btitle + '</span>').appendTo($postWrap);
+                            $('<div class="post_content ">').html('<span >' + board.bcontent + '</span>').appendTo($postWrap);
+                            $('<span class="hidden">').html(board.bno).appendTo($postWrap);
+
+                            //각 게시글의 상세 내용을 출력할 div 선택
+                            let $infoWrap = ($postWrap).append('<div class="info_wrap">');
+
+                            $('<span class="post_writer">').html(board.mbid.mcname + " · " + board.mbid.mid + '</br>').appendTo($postWrap);
+                            $('<span class="post_info">').html("👍 : " + board.blike).appendTo($infoWrap);
+                            $('<span class="post_info">').html("💬 : " + board.bcomment).appendTo($infoWrap);
+                            $('<span class="post_info">').html("조회수 : " + board.bview).appendTo($infoWrap);
+                            $('<span class="post_date post_info">').html(fromNow).appendTo($infoWrap);
+
+                        });
+                        //목록 출력 후, sessionStorage에 현재 카테고리 저장
+                        sessionStorage.setItem("category", category)
+                    },
+                    error: function (error) {
+                        console.log(error)
+                    }
+                }
+            )
+            ;
+        }
+
+        //무한페이징 처리
+        //$(window).scrollTop() : 스크롤의 위치에 따라 변하는 값 (세로 좌표),최상단 0, 최하단 도달시 스크롤 길이가 최대값을 가짐.
+        //$(window).height(): 보여지는 창의 높이 길이
+        // $(document).height() : jsp, html 등 문서의 높이 길이, 보여지는 창의 높이 길이보다 문서의 길이가 길다면 스크롤생성
+
+        $(window).scroll(function () {
+            //보여지는 창의 높이 - 문서의 높이 만큼 스크롤이 이동하면,
+            if (($(window).scrollTop()) === $(document).height() - $(window).height()) {
+                //페이지 번호 1 증가 후, 다음 페이지의 게시글 불러오기
+                pageNum++;
+                getTopic(category, pageNum);
+            }
+        })
+
+
+        //게시글 클릭시, 해당 글의 상세페이지 이동
+        $(document).on("click", ".readPost", function () {
+            let bno = $(this).children('.hidden').text();
+            console.log("bno = " + bno)
+            location.href = "detail?bno=" + bno;
+        })
+
+    })
+</script>
+</html>

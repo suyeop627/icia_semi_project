@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Board - write</title>
+  <link rel="stylesheet" href="css/writePost.css">
+  <script src="https://code.jquery.com/jquery-3.6.1.min.js"
+          integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+</head>
+<th:block th:include="header.html"></th:block>
+<body>
+<div class="content">
+  <!--    enctype="multipart/form-data" : 파일 업로드할 때 필요한 속성. -->
+  <form th:action="@{writeProc}" method="post" class="write-form" enctype="multipart/form-data">
+
+    <h2 class="login-header">글 쓰기</h2>
+    <hr style="color: #d4d4d4; opacity: 0.7">
+    <select class="bca" name="bcategory">
+      <option>자유게시판</option>
+      <option>회사생활</option>
+      <option>주식/투자</option>
+      <option>썸/연애</option>
+      <option>결혼</option>
+      <option>라이프</option>
+    </select>
+    <hr style="color: #d4d4d4; opacity: 0.7">
+    <input type="text" class="bt" name="btitle" autofocus placeholder="제목을 입력해주세요" required>
+    <hr style="color: #d4d4d4; opacity: 0.7">
+    <input type="text" class="hidden" name="mbid" th:value="${session.member.mid}" readonly>
+
+    <textarea rows="15" class="bcon" name="bcontent" placeholder="글 내용을 입력해주세요(1000자 이내)"></textarea>
+    <hr style="color: #d4d4d4; opacity: 0.7">
+
+    <div class="filebox">
+      <label for="file">업로드 파일</label>
+      <input type="file" name="files" id="file" class="hidden" multiple>
+      <!--      <input type="file" name="files" id="file" class="hidden"  multiple>-->
+      <input type="text" class="upload-name" value="첨부파일" readonly>
+    </div>
+    <div class="btn-area">
+      <input type="button" id="bbtn" value="뒤로가기">
+      <input type="submit" id="wbtn" value="작성하기">
+
+
+    </div>
+  </form>
+</div>
+
+</body>
+<th:block th:include="footer.html"></th:block>
+<script th:inline="javascript">
+    //뒤로가기
+    $("#bbtn").click(function () {
+        location.href = "/?category=" + [[${session.category}]];
+    });
+
+    let m = [[${msg}]];
+    if (m != null) {
+        alert(m);
+    }
+//업로드한 파일 변경 시, 출력하는 이름 변경
+    $("#file").on("change", function () {
+
+        let files = $("#file")[0].files;
+        console.log(files);
+        let fileName = "";
+
+        if (files.length > 1) {
+            fileName = files[0].name + " 외 " + (files.length - 1) + "개";
+
+        } else if (files.length === 1) {
+            fileName = files[0].name
+        } else {//파일 선택창에서 취소했을때
+            fileName = "첨부파일"
+        }
+        $(".upload-name").val(fileName);
+    });
+
+
+</script>
+</html>
